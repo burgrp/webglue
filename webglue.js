@@ -22,8 +22,6 @@ module.exports = config => {
 			resources = resources.concat(await pro(fs.readdir)(resDir));
 		}
 		
-		console.info(resources);
-
 		let index = (await pro(fs.readFile)(`/${__dirname}/index.html`)).toString();
 
 		let resourcesStr = "";
