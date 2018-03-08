@@ -95,7 +95,7 @@ module.exports = config => {
 			let server = require('http').Server(app);
 			let sio = createWebSocket(server);
 
-			config.applications.forEach((app) => {
+			config.modules.forEach((app) => {
 				
 				if (app.api) {
 					Object.entries(app.api).forEach(([name, api]) => {
