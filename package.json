@@ -1,0 +1,10 @@
+{
+  "name": "@device.farm/webglue",
+  "version": "1.0.0",
+  "main": "webglue.js",
+  "dependencies": {
+    "express": "^4.16.2",
+    "socket.io": "^2.0.4",
+    "ws": "^5.0.0"
+  }
+}
