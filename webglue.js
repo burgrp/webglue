@@ -88,6 +88,8 @@ module.exports = config => {
 
 	return {
 		
+		modules: config.modules,
+
 		async start() {
 
 			let express = require('express');
