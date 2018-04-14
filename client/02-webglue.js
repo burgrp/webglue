@@ -10,7 +10,7 @@ let wg = {
 		}
 	},
 
-	goto(page, current) {
+	async goto(page, current) {
 
 		if (current) {
 			history.replaceState(page, page, page);
@@ -46,7 +46,7 @@ let wg = {
 
 		console.info("Rendering", page, params);
 		document.title = p.title || page;
-		p.render(root, page, params);
+		await p.render(root, page, params);
 	}
 };
 
