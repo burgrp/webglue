@@ -83,6 +83,7 @@ function startWebglue() {
 	createFactory("BUTTON", "button");
 	createFactory("LABEL", "label");
 	createFactory("PAR", "p");
+	createFactory("IMG", "img");
 	createFactory("SETOFF", "i");
 	createFactory("FORM", "form");
 	createFactory("SELECT", "select");
