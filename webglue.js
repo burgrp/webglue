@@ -13,6 +13,32 @@ module.exports = config => {
 	
 	let apis = {};
 	let events = [];
+	let sio;
+
+	config.modules.forEach((app) => {
+				
+		if (app.api) {
+			Object.entries(app.api).forEach(([name, api]) => {
+				apis[name] = api;
+			});
+		}
+
+		if (app.events) {
+			Object.keys(app.events).forEach(eventName => {
+				events.push(eventName);
+				app.events[eventName] = (...args) => {
+					if (sio) {
+						sio.sockets.emit("event", eventName, args);
+					}
+				}
+			});
+		}
+
+		if (app.client) {
+			resourceDirectories.push(app.client);
+		}
+
+	});	
 
 	async function getIndex() {
 		
@@ -88,37 +114,12 @@ module.exports = config => {
 
 	return {
 		
-		modules: config.modules,
-
 		async start() {
 
 			let express = require('express');
 			let app = express();
 			let server = require('http').Server(app);
-			let sio = createWebSocket(server);
-
-			config.modules.forEach((app) => {
-				
-				if (app.api) {
-					Object.entries(app.api).forEach(([name, api]) => {
-						apis[name] = api;
-					});
-				}
-
-				if (app.events) {
-					Object.keys(app.events).forEach(eventName => {
-						events.push(eventName);
-						app.events[eventName] = (...args) => {
-							sio.sockets.emit("event", eventName, args);
-						}
-					});
-				}
-
-				if (app.client) {
-					resourceDirectories.push(app.client);
-				}
-
-			});
+			sio = createWebSocket(server);
 
 			resourceDirectories.forEach(dir => {
 				app.use(express.static(dir));
