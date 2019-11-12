@@ -121,9 +121,9 @@ function startWebglue() {
 
 	const socket = io.connect(url);
 
-	socket.on("event", (eventName, args) => {
-		console.info("->", eventName, args);
-		$("*").trigger("webglue." + eventName, args);
+	socket.on("event", (apiName, eventName, args) => {
+		console.info("->", (apiName || "(none)") + "." + eventName, args);
+		$("*").trigger("webglue." + (apiName? apiName + ".": "") + eventName, args);
 	});
 
 	socket.on("connect", () => {
@@ -158,17 +158,25 @@ function startWebglue() {
 				$("*").trigger("webglue.Heartbeat");
 			}, 1000);
 
-			info.events.push("Heartbeat");
+			if (!info.events["/"]) {
+				info.events["/"] = [];
+			}
+			info.events["/"].push("Heartbeat");
 
-			info.events.forEach(eventName => {
-				$.fn["on" + eventName.charAt(0).toUpperCase() + eventName.slice(1)] = function (handler) {
-					this.on("webglue." + eventName, (e, ...args) => {
-						if (e.currentTarget === e.target) {
-							handler.apply(handler, args);
-						}
-					});
-					return this;
-				};
+			Object.entries(info.events).forEach(([apiName, events]) => {
+				events.forEach(eventName => {
+					let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
+					let methodName = "on" + (apiName? initcap(apiName): "") + initcap(eventName);
+					let jqName = "webglue." + (apiName? apiName + ".": "") + eventName;
+					$.fn[methodName] = function (handler) {
+						this.on(jqName, (e, ...args) => {
+							if (e.currentTarget === e.target) {
+								handler.apply(handler, args);
+							}
+						});
+						return this;
+					};
+				});
 			});
 
 			wg.goto(window.location.pathname + window.location.search, true);

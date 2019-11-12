@@ -10,13 +10,17 @@ module.exports = config => {
 	let resourceDirectories = [
 		__dirname + "/client"
 	];
-	
+
 	let apis = {};
-	let events = [];
+	let callChecks = [];
+
+	let events = {};
+	let eventFilters = [];
+
 	let sio;
 
 	config.modules.forEach((app) => {
-				
+
 		if (app.api) {
 			Object.entries(app.api).forEach(([name, api]) => {
 				apis[name] = api;
@@ -24,40 +28,72 @@ module.exports = config => {
 		}
 
 		if (app.events) {
-			Object.keys(app.events).forEach(eventName => {
-				events.push(eventName);
-				app.events[eventName] = (...args) => {
-					if (sio) {
-						sio.sockets.emit("event", eventName, args);
+			function addEvents(apiName, src, dst) {
+				events[apiName] = [];
+				Object.entries(src).forEach(([key, value]) => {
+					if (value === undefined) {
+						events[apiName].push(key);
+						src[key] = async (...args) => {
+							if (sio) {
+								for (let socket of Object.values(sio.sockets.connected)) {
+									let allowed = true;
+									for (let filterEvent of eventFilters) {
+										if (! await filterEvent.bind(socket.appData)({
+											apiName,
+											eventName: key,
+											args
+										})) {
+											allowed = false;
+											break;
+										}
+									}
+									if (allowed) {
+										socket.emit("event", apiName, key, args);
+									}
+								}
+							}
+						}
+					} else if (typeof value === "object") {
+						addEvents(key, value);
 					}
-				}
-			});
+				});
+			}
+
+			addEvents("", app.events);
 		}
 
 		if (app.client) {
 			resourceDirectories.push(app.client);
 		}
 
-	});	
+		if (app.checkCall) {
+			callChecks.push(app.checkCall);
+		}
+
+		if (app.filterEvent) {
+			eventFilters.push(app.filterEvent);
+		}
+
+	});
 
 	async function getIndex() {
-		
+
 		let resources = [];
-		
+
 		for (let resDir of resourceDirectories) {
 			resources = resources.concat(await pro(fs.readdir)(resDir));
 		}
-		
+
 		let index = (await pro(fs.readFile)(`/${__dirname}/index.html`)).toString();
 
 		let resourcesStr = "";
 
 		let includeResources = (ext, tagFnc) => {
 			resources
-					.filter(f => path.extname(f).slice(1) === ext)
-					.map(f => path.basename(f))
-					.sort()
-					.forEach(f => resourcesStr += `		${tagFnc(f)}\n`);
+				.filter(f => path.extname(f).slice(1) === ext)
+				.map(f => path.basename(f))
+				.sort()
+				.forEach(f => resourcesStr += `		${tagFnc(f)}\n`);
 		};
 
 		includeResources("css", f => `<link href="${f}" rel="stylesheet" type="text/css"/>`);
@@ -67,12 +103,14 @@ module.exports = config => {
 
 		return index;
 	}
-	
+
 	function createWebSocket(server) {
 
 		let sio = require('socket.io')(server);
 
-		sio.on("connection", (socket) => {
+		sio.on("connection", socket => {
+
+			socket.appData = {};
 
 			socket.on("discover", (version, cb) => {
 				cb({
@@ -91,29 +129,42 @@ module.exports = config => {
 			});
 
 			socket.on("call", (call, cb) => {
-				
+
 				async function callApi() {
+
 					let api = apis[call.api];
-					if (!api) throw `There is no API ${call.api}`;
+					if (!api) throw new Error(`There is no API ${call.api}`);
+
 					let fnc = api[call.fnc];
-					if (!fnc) throw `There is no function ${fnc} in API ${call.api}`;
-					return await fnc(...call.args);
+					if (!fnc) throw new Error(`There is no function ${fnc} in API ${call.api}`);
+
+					for (let callCheck of callChecks) {
+						await callCheck.bind(socket.appData)({
+							api,
+							fnc,
+							apiName: call.api,
+							fncName: call.fnc,
+							args: call.args
+						});
+					}
+
+					return await fnc.bind(socket.appData)(...call.args);
 				}
-				
+
 				callApi().then(result => {
-					cb({result});
+					cb({ result });
 				}, error => {
-					cb({error: error.message || error});
+					cb({ error: error.message || error });
 				});
 			});
 
 		});
-		
+
 		return sio;
-	}	
+	}
 
 	return {
-		
+
 		async start() {
 
 			let express = require('express');
@@ -129,7 +180,6 @@ module.exports = config => {
 			app.get("/*", function (req, res) {
 				res.send(index);
 			});
-
 
 			let port = config.httpPort || 8080;
 			server.listen(port);
