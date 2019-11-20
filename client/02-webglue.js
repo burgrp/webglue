@@ -44,9 +44,20 @@ let wg = {
 		root.empty();
 		let p = this.pages[page] || this.pages.DEFAULT;
 
-		console.info("Rendering", page, params);
-		document.title = p.title || page;
-		await p.render(root, page, params);
+		let render = true;
+		if (p.check) {
+			let redirection = await p.check(page, params);
+			if (redirection) {
+				render = false;
+				await this.goto(redirection, page);
+			}
+		}
+
+		if (render) {
+			console.info("Rendering", page, params);
+			document.title = p.title || page;
+			await p.render(root, page, params);
+		}
 	}
 };
 
@@ -123,7 +134,7 @@ function startWebglue() {
 
 	socket.on("event", (apiName, eventName, args) => {
 		console.info("->", (apiName || "(none)") + "." + eventName, args);
-		$("*").trigger("webglue." + (apiName? apiName + ".": "") + eventName, args);
+		$("*").trigger("webglue." + (apiName ? apiName + "." : "") + eventName, args);
 	});
 
 	socket.on("connect", () => {
@@ -166,8 +177,8 @@ function startWebglue() {
 			Object.entries(info.events).forEach(([apiName, events]) => {
 				events.forEach(eventName => {
 					let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
-					let methodName = "on" + (apiName? initcap(apiName): "") + initcap(eventName);
-					let jqName = "webglue." + (apiName? apiName + ".": "") + eventName;
+					let methodName = "on" + (apiName ? initcap(apiName) : "") + initcap(eventName);
+					let jqName = "webglue." + (apiName ? apiName + "." : "") + eventName;
 					$.fn[methodName] = function (handler) {
 						this.on(jqName, (e, ...args) => {
 							if (e.currentTarget === e.target) {
