@@ -113,7 +113,11 @@ function startWebglue() {
 
 	$(document).on("click", "a", e => {
 		let page = $(e.currentTarget).attr("href");
-		if (!page.startsWith("http") && !page.startsWith("blob")) {
+		if (
+			!page.startsWith("http") &&
+			!page.startsWith("blob") &&
+			!page.startsWith("data:")
+		) {
 			e.preventDefault();
 			let page = $(e.currentTarget).attr("href");
 			wg.goto(page);
