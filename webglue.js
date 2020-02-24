@@ -110,7 +110,7 @@ module.exports = config => {
 
 		sio.on("connection", socket => {
 
-			socket.appData = {};
+			socket.appData = { socket };
 
 			socket.on("discover", (version, cb) => {
 				cb({
