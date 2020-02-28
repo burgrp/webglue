@@ -169,7 +169,6 @@ module.exports = config => {
 
 			let express = require('express');
 			let app = express();
-			app.set("etag", false);
 
 			let server = require('http').Server(app);
 			sio = createWebSocket(server);
