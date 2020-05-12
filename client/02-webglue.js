@@ -40,6 +40,10 @@ let wg = {
 			page = page.slice(0, qmPos);
 		}
 
+		if (!page || page === "") {
+			page = "home";
+		}
+
 		let root = $("body");
 		root.empty();
 		let p = this.pages[page] || this.pages.DEFAULT;
