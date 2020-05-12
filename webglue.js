@@ -4,6 +4,8 @@ const pro = require("util").promisify;
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const terser = require("terser");
+const cleanCss = require("clean-css");
 
 module.exports = config => {
 
@@ -80,24 +82,51 @@ module.exports = config => {
 
 		let resources = [];
 
-		for (let resDir of resourceDirectories) {
-			resources = resources.concat(await pro(fs.readdir)(resDir));
+		for (let dir of resourceDirectories) {
+			resources = resources.concat((await pro(fs.readdir)(dir)).map(f => ({
+				dir,
+				name: f,
+				type: path.extname(f).slice(1)
+			})));
 		}
 
 		let index = (await pro(fs.readFile)(`/${__dirname}/index.html`)).toString();
 
 		let resourcesStr = "";
 
-		let includeResources = (ext, tagFnc) => {
-			resources
-				.filter(f => path.extname(f).slice(1) === ext)
-				.map(f => path.basename(f))
-				.sort()
-				.forEach(f => resourcesStr += `		${tagFnc(f)}\n`);
+		async function includeResources({type, ref, minify, inline}) {
+
+			let list = resources.filter(r => r.type === type).sort((a, b) => a.name > b.name ? 1 : -1);
+
+			if (config.minify) {
+
+				let minified = "";
+				for (r of list) {
+					minified = minified + (await pro(fs.readFile)(r.dir + "/" + r.name)) + "\n";
+				}
+
+				console.info(`${type} code minified to ${minified.length} characters`)
+
+				resourcesStr += inline(minify(minified));
+
+			} else {
+				list.forEach(r => resourcesStr += `		${ref(r.name)}\n`);
+			}
 		};
 
-		includeResources("css", f => `<link href="${f}" rel="stylesheet" type="text/css"/>`);
-		includeResources("js", f => `<script src="${f}" type="text/javascript"></script>`);
+		await includeResources({
+			type: "css",
+			ref: name => `<link href="${name}" rel="stylesheet" type="text/css"/>`,
+			minify: src => new cleanCss({}).minify(src).styles,
+			inline: minified => `<style>${minified}</style>`
+		});
+
+		await includeResources({
+			type: "js",
+			ref: name => `<script src="${name}" type="text/javascript"></script>`,
+			minify: src => terser.minify(src).code,
+			inline: minified => `<script type="text/javascript">${minified}</script>`
+		});
 
 		index = index.replace("{webplugResources}", resourcesStr);
 
