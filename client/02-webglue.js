@@ -141,7 +141,9 @@ function startWebglue() {
 	const socket = io.connect(url);
 
 	socket.on("event", (apiName, eventName, args) => {
-		console.info("->", (apiName || "(none)") + "." + eventName, args);
+		if (wg.logEvents) {
+			console.info("->", (apiName || "(none)") + "." + eventName, args);
+		}
 		$("*").trigger("webglue." + (apiName ? apiName + "." : "") + eventName, args);
 	});
 
