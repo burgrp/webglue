@@ -37,7 +37,7 @@ module.exports = config => {
 						events[apiName].push(key);
 						src[key] = async (...args) => {
 							if (sio) {
-								for (let socket of Object.values(sio.sockets.connected)) {
+								for (let socket of Object.values(await sio.fetchSockets())) {
 									let allowed = true;
 									for (let filterEvent of eventFilters) {
 										if (! await filterEvent.bind(socket.appData)({
