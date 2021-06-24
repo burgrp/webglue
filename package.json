@@ -1,6 +1,6 @@
 {
   "name": "@device.farm/webglue",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "main": "webglue.js",
   "dependencies": {
     "express": "^4.17.1",
