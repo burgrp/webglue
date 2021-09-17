@@ -1,5 +1,5 @@
 {
-  "name": "@device.farm/webglue",
+  "name": "@burgrp/webglue",
   "version": "1.0.18",
   "main": "webglue.js",
   "dependencies": {
