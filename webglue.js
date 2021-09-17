@@ -216,6 +216,8 @@ module.exports = config => {
 
 			console.info(`Application available at http://${os.hostname()}.local${port === 80 ? "" : (":" + port)}`);
 
+			return app;
+
 		}
 	};
 };
