@@ -1,6 +1,6 @@
 {
   "name": "@burgrp/webglue",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "main": "webglue.js",
   "dependencies": {
     "express": "^4.17.1",
